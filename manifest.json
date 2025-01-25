@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Sleep4Fajr",
+  "description": "Sleep4Fajr is an extension made to help you wake up for fajr by giving you the best time to sleep.",
+  "action": {
+    "default_popup": "src/pages/popup/index.html",
+    "default_icon": {
+      "32": "icon-32.png"
+    }
+  },
+  "icons": {
+    "128": "icon-128.png"
+  },
+  "permissions": ["activeTab"],
+  "devtools_page": "src/pages/devtools/index.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["contentStyle.css", "icon-128.png", "icon-32.png"],
+      "matches": []
+    }
+  ]
+}
