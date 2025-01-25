@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-	"version": 1.0.0,
+  "version": 1.0,
   "name": "Sleep4Fajr",
   "description": "Sleep4Fajr is an extension made to help you wake up for fajr prayer by giving you the best time to sleep.",
   "action": {
