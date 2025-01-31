@@ -111,6 +111,13 @@ export default function ExtensionUI() {
     setSidebarVisible(!sidebarVisible);
   };
 
+  // Handle Enter key press
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleApply();
+    }
+  };
+
   return (
     <div className="w-[400px] h-[450px] bg-background text-foreground relative overflow-hidden">
       <div
@@ -126,6 +133,7 @@ export default function ExtensionUI() {
               size="icon"
               onClick={toggleSidebar}
               aria-label="Show prayer times"
+              disabled={!location} // Disable the button if location is empty
             >
               <Menu className="h-6 w-6" />
             </Button>
@@ -136,45 +144,55 @@ export default function ExtensionUI() {
               placeholder="Enter country or place"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              onKeyDown={handleKeyDown} // Add keydown event listener
               className="flex-grow"
             />
             <Button onClick={handleApply}>Apply</Button>
           </div>
           <div className="text-2xl font-bold mb-2 text-center">
-            <Countdown fajrTime="06:22am" />
+            <Countdown fajrTime={prayers?.fajr || "00:00 am"} />
           </div>
-          <p className="text-sm text-center text-muted-foreground mb-2">
-            Time until Fajr prayer ({prayers?.fajr})
-          </p>
-          <p className="text-sm text-center text-muted-foreground mb-2">
-            Optimal bed times:
-          </p>
-          <div className="grid grid-cols-2 gap-2 mb-4 text-center">
-            {Object.entries(sleepTimes)
-              .reverse()
-              .map(([key, value]) => (
-                <div key={key} className="border rounded p-2 text-sm">
-                  {value}
-                  {key.split("Cycles")[0] === "six" ||
-                  key.split("Cycles")[0] === "five" ? (
-                    <>
-                      {" "}
-                      <span className="text-xs font-semibold text-yellow-400">
-                        SUGGESTED
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-              ))}
-          </div>
-          {/* Add the paragraph here */}
-          <p className="text-sm text-center text-muted-foreground mb-4">
-            The average human takes 16 minutes to fall asleep.
-            <br />
-            If you wake up at one of these times, you’ll rise in between
-            90-minute sleep cycles. A good night’s sleep consists of 5-6
-            complete sleep cycles.
-          </p>
+          {!location && ( // Show note only when location is empty
+            <p className="text-sm text-center text-muted-foreground mb-2">
+              Start typing in the input field above and press Enter to get the
+              info you need!
+            </p>
+          )}
+          {location && ( // Only render the bottom half if location is not empty
+            <>
+              <p className="text-sm text-center text-muted-foreground mb-2">
+                Time until Fajr prayer ({prayers?.fajr})
+              </p>
+              <p className="text-sm text-center text-muted-foreground mb-2">
+                Optimal bed times:
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-4 text-center">
+                {Object.entries(sleepTimes)
+                  .reverse()
+                  .map(([key, value]) => (
+                    <div key={key} className="border rounded p-2 text-sm">
+                      {value}
+                      {key.split("Cycles")[0] === "six" ||
+                      key.split("Cycles")[0] === "five" ? (
+                        <>
+                          {" "}
+                          <span className="text-xs font-semibold text-yellow-400">
+                            SUGGESTED
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                  ))}
+              </div>
+              <p className="text-sm text-center text-muted-foreground mb-4">
+                The average human takes 16 minutes to fall asleep.
+                <br />
+                If you wake up at one of these times, you’ll rise in between
+                90-minute sleep cycles. A good night’s sleep consists of 5-6
+                complete sleep cycles.
+              </p>
+            </>
+          )}
         </div>
       </div>
       {/* Sidebar for Prayer Times */}
