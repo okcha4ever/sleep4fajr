@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { ArrowLeft } from "lucide-react";
-import { Prayers, PrayerTimesResponse } from "@src/lib/utils";
+import { Prayers } from "@src/lib/utils";
 
 type SidebarProps = {
   prayers: Prayers;
@@ -25,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ prayers, toggleSidebar }) => {
           </Button>
           <CardTitle className="text-lg">Prayer Times</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col h-full">
           <ul className="space-y-4">
             <li className="flex justify-between items-center border-b pb-2">
               <span className="text-lg">Fajr</span>
@@ -52,6 +51,18 @@ const Sidebar: React.FC<SidebarProps> = ({ prayers, toggleSidebar }) => {
               <span className="text-xl font-semibold">{prayers?.isha}</span>
             </li>
           </ul>
+          {/* Attribution Footer */}
+          <div className="text-center text-sm text-muted-foreground mt-4 italic">
+            Powered by{" "}
+            <a
+              href="https://www.muslimsalat.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline font-semibold"
+            >
+              MuslimSalat.com
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -149,9 +149,11 @@ export default function ExtensionUI() {
             />
             <Button onClick={handleApply}>Apply</Button>
           </div>
-          <div className="text-2xl font-bold mb-2 text-center">
-            <Countdown fajrTime={prayers?.fajr || "00:00 am"} />
-          </div>
+          {location && ( // Only show countdown if location is set
+            <div className="text-2xl font-bold mb-2 text-center">
+              <Countdown fajrTime={prayers?.fajr || "00:00 am"} />
+            </div>
+          )}
           {!location && ( // Show note only when location is empty
             <p className="text-sm text-center text-muted-foreground mb-2">
               Start typing in the input field above and press Enter to get the
