@@ -1,30 +1,22 @@
 import { useState, useEffect } from "react";
 import { Input } from "./input";
 import { Button } from "./button";
-import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { Menu, ArrowLeft, ExternalLink } from "lucide-react";
+import { Menu } from "lucide-react";
+import Sidebar from "./sidebar";
+import Countdown from "./countdown";
+import { Prayers, PrayerTimesResponse } from "@src/lib/utils";
 
-// Placeholder for prayer times
-const prayerTimes = [
-  { name: "Fajr", time: "06:30" },
-  { name: "Dhuhr", time: "00:00" },
-  { name: "Asr", time: "00:00" },
-  { name: "Maghrib", time: "00:00" },
-  { name: "Isha", time: "00:00" },
-];
-
-interface SleepTimes {
+type SleepTimes = {
   oneCycle: string;
   twoCycles: string;
   threeCycles: string;
   fourCycles: string;
   fiveCycles: string;
   sixCycles: string;
-}
+};
 
 export default function ExtensionUI() {
   const [location, setLocation] = useState("");
-  const [counter, setCounter] = useState("");
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [sleepTimes, setSleepTimes] = useState<SleepTimes>({
     oneCycle: "",
@@ -35,48 +27,84 @@ export default function ExtensionUI() {
     sixCycles: "",
   });
 
-  // Fetch sleep times from background script
-  useEffect(() => {
-    chrome.runtime.sendMessage(
-      { type: "GET_SLEEP_TIMES" },
-      (response: SleepTimes) => {
-        if (response) {
-          setSleepTimes(response);
-        }
-      },
-    );
-  }, []);
+  // Fetch prayer times from background script
+  const [prayers, setPrayers] = useState<Prayers>();
 
-  // Countdown to Fajr
-  useEffect(() => {
-    const updateCounter = () => {
-      const now = new Date();
-      const fajrTime = new Date(now);
-      fajrTime.setHours(6, 30, 0, 0);
-
-      if (now > fajrTime) {
-        fajrTime.setDate(fajrTime.getDate() + 1);
-      }
-
-      const diff = fajrTime.getTime() - now.getTime();
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setCounter(
-        `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
+  const getPrayerTimesFromStorage = async () => {
+    try {
+      const storage = await chrome.storage.local.get("prayerTimes");
+      const prayerTimesResponse = storage.prayerTimes as PrayerTimesResponse;
+      setPrayers(prayerTimesResponse.items[0]);
+    } catch (err) {
+      console.error(
+        "Error accessing chrome.storage.local for prayerTimes:",
+        err,
       );
+    }
+  };
+
+  function capitalizeFirstLetter(str: string) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // Fetch prayer times and location on initial load
+  useEffect(() => {
+    getPrayerTimesFromStorage();
+
+    const checkStorageForLocation = async () => {
+      const storage = await chrome.storage.sync.get("location");
+      if (storage.location) {
+        setLocation(capitalizeFirstLetter(storage.location));
+      }
     };
-
-    updateCounter();
-    const timer = setInterval(updateCounter, 1000);
-
-    return () => clearInterval(timer);
+    checkStorageForLocation();
   }, []);
+
+  // Refetch prayer times and update sleep times when location changes
+  useEffect(() => {
+    if (location) {
+      getPrayerTimesFromStorage();
+    }
+  }, [location]);
+
+  // Update sleep times when prayers change
+  useEffect(() => {
+    if (prayers) {
+      const fajrTime = prayers.fajr;
+
+      chrome.runtime.sendMessage(
+        { type: "GET_SLEEP_TIMES", fajrTime: fajrTime },
+        (response: SleepTimes) => {
+          if (response) {
+            setSleepTimes(response);
+          }
+        },
+      );
+    }
+  }, [prayers]);
 
   const handleApply = async () => {
-    console.log(`Fetching prayer times for ${location}`);
-    // Add your prayer times fetching logic here
+    try {
+      const storage = chrome?.storage?.sync || browser?.storage?.sync;
+      if (!storage) {
+        throw new Error("Storage API is not available.");
+      }
+
+      // Save the new location
+      await storage.set({ location: location.toLowerCase() });
+
+      // Trigger a refetch of data in the background script
+      chrome.runtime.sendMessage({ type: "REFETCH_DATA" }, (response) => {
+        if (response?.success) {
+          // Refetch prayer times after the background script reloads
+          getPrayerTimesFromStorage();
+        } else {
+          console.log("Failed to reload background script:", response?.error);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to save location to storage:", error);
+    }
   };
 
   const toggleSidebar = () => {
@@ -84,14 +112,15 @@ export default function ExtensionUI() {
   };
 
   return (
-    <div className="w-[400px] h-[600px] bg-background text-foreground relative overflow-hidden">
-      {/* Main UI */}
+    <div className="w-[400px] h-[450px] bg-background text-foreground relative overflow-hidden">
       <div
-        className={`absolute inset-0 transition-transform duration-300 ease-in-out ${sidebarVisible ? "translate-x-[-100%]" : "translate-x-0"}`}
+        className={`absolute inset-0 transition-transform duration-300 ease-in-out ${
+          sidebarVisible ? "translate-x-[-100%]" : "translate-x-0"
+        }`}
       >
         <div className="p-4 flex flex-col h-full">
           <header className="text-2xl font-bold mb-4 text-center flex justify-between items-center">
-            <span>Prayer Times</span>
+            <span>Sleep4Fajr</span>
             <Button
               variant="ghost"
               size="icon"
@@ -111,16 +140,18 @@ export default function ExtensionUI() {
             />
             <Button onClick={handleApply}>Apply</Button>
           </div>
-          <div className="text-2xl font-bold mb-2 text-center">{counter}</div>
+          <div className="text-2xl font-bold mb-2 text-center">
+            <Countdown fajrTime="06:22am" />
+          </div>
           <p className="text-sm text-center text-muted-foreground mb-2">
-            Time until Fajr prayer (06:30 AM)
+            Time until Fajr prayer ({prayers?.fajr})
           </p>
           <p className="text-sm text-center text-muted-foreground mb-2">
             Optimal bed times:
           </p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-4 text-center">
             {Object.entries(sleepTimes)
-              .reverse() // Reverse the order of the array
+              .reverse()
               .map(([key, value]) => (
                 <div key={key} className="border rounded p-2 text-sm">
                   {value}
@@ -136,61 +167,23 @@ export default function ExtensionUI() {
                 </div>
               ))}
           </div>
-          <div className="mt-auto">
-            <p className="text-sm text-center text-muted-foreground mb-4">
-              The average human takes 16 minutes to fall asleep.
-              <br></br>
-              <br></br>
-              If you wake up at one of these times, you’ll rise in between
-              90-minute sleep cycles. A good night’s sleep consists of 5-6
-              complete sleep cycles.
-            </p>
-            <footer className="pt-4 border-t text-center">
-              <a
-                href="https://your-portfolio-url.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-primary hover:underline"
-              >
-                Visit My Portfolio
-                <ExternalLink className="ml-1 h-4 w-4" />
-              </a>
-            </footer>
-          </div>
+          {/* Add the paragraph here */}
+          <p className="text-sm text-center text-muted-foreground mb-4">
+            The average human takes 16 minutes to fall asleep.
+            <br />
+            If you wake up at one of these times, you’ll rise in between
+            90-minute sleep cycles. A good night’s sleep consists of 5-6
+            complete sleep cycles.
+          </p>
         </div>
       </div>
-
       {/* Sidebar for Prayer Times */}
       <div
-        className={`absolute inset-0 transition-transform duration-300 ease-in-out ${sidebarVisible ? "translate-x-0" : "translate-x-[100%]"}`}
+        className={`absolute inset-0 transition-transform duration-300 ease-in-out ${
+          sidebarVisible ? "translate-x-0" : "translate-x-[100%]"
+        }`}
       >
-        <Card className="w-full h-full rounded-none">
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="mr-2"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <CardTitle className="text-lg">Prayer Times</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-4">
-              {prayerTimes.map((prayer) => (
-                <li
-                  key={prayer.name}
-                  className="flex justify-between items-center border-b pb-2"
-                >
-                  <span className="text-lg">{prayer.name}</span>
-                  <span className="text-xl font-semibold">{prayer.time}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <Sidebar prayers={prayers!} toggleSidebar={toggleSidebar} />
       </div>
     </div>
   );
