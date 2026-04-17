@@ -57,11 +57,17 @@ Create a `.env` file in the root of the project with the following content:
 
 ```env
 ISLAMIC_API_KEY=your_api_key_here
-VITE_API_BASE_URL=http://localhost:8787
+VITE_API_BASE_URL=https://sleep4fajr.onrender.com
 ```
 
 `ISLAMIC_API_KEY` is only used by the Bun proxy server, not by the extension bundle.
 `VITE_API_BASE_URL` tells the extension where your proxy is running.
+
+For local proxy development, override `VITE_API_BASE_URL` with:
+
+```env
+VITE_API_BASE_URL=http://localhost:8787
+```
 
 ### 6. Build the Extension
 

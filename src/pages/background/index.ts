@@ -2,7 +2,7 @@ import { type PrayerTimesResponse } from "@src/lib/utils";
 
 console.log("background script loaded!");
 const proxyBaseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8787";
+  import.meta.env.VITE_API_BASE_URL || "https://sleep4fajr.onrender.com";
 
 /**
  * Calculate optimal sleep times based on Fajr time (06:30 AM).
