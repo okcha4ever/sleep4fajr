@@ -1,11 +1,11 @@
 {
-  "name": "vite-web-extension",
-  "version": "1.0.0",
-  "description": "A simple chrome & firefox extension template with Vite, React, TypeScript and Tailwind CSS.",
+  "name": "sleep4fajr",
+  "version": "1.5.0",
+  "description": "Sleep4Fajr is a web extension that helps you wake up for Fajr prayer by giving you the best time to sleep based on the adhan",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JohnBra/vite-web-extension.git"
+    "url": "https://github.com/okcha4ever/sleep4fajr"
   },
   "scripts": {
     "build": "vite build --config vite.config.chrome.ts",
