@@ -18,6 +18,8 @@ type SleepTimes = {
 export default function ExtensionUI() {
   const [location, setLocation] = useState("");
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [sleepTimes, setSleepTimes] = useState<SleepTimes>({
     oneCycle: "",
     twoCycles: "",
@@ -30,11 +32,21 @@ export default function ExtensionUI() {
   // Fetch prayer times from background script
   const [prayers, setPrayers] = useState<Prayers>();
 
+  const applyPrayerTimes = (prayerTimesResponse?: PrayerTimesResponse) => {
+    const prayerData = prayerTimesResponse?.items?.[0];
+
+    if (!prayerData) {
+      return;
+    }
+
+    setPrayers(prayerData);
+    setErrorMessage("");
+  };
+
   const getPrayerTimesFromStorage = async () => {
     try {
       const storage = await chrome.storage.local.get("prayerTimes");
-      const prayerTimesResponse = storage.prayerTimes as PrayerTimesResponse;
-      setPrayers(prayerTimesResponse.items[0]);
+      applyPrayerTimes(storage.prayerTimes as PrayerTimesResponse);
     } catch (err) {
       console.error(
         "Error accessing chrome.storage.local for prayerTimes:",
@@ -58,6 +70,21 @@ export default function ExtensionUI() {
       }
     };
     checkStorageForLocation();
+
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName === "local" && changes.prayerTimes?.newValue) {
+        applyPrayerTimes(changes.prayerTimes.newValue as PrayerTimesResponse);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   // Refetch prayer times and update sleep times when location changes
@@ -84,26 +111,47 @@ export default function ExtensionUI() {
   }, [prayers]);
 
   const handleApply = async () => {
+    const normalizedLocation = location.trim();
+
+    if (!normalizedLocation) {
+      setErrorMessage("Enter a city or place name first.");
+      return;
+    }
+
     try {
+      setIsLoading(true);
+      setErrorMessage("");
       const storage = chrome?.storage?.sync || browser?.storage?.sync;
       if (!storage) {
         throw new Error("Storage API is not available.");
       }
 
       // Save the new location
-      await storage.set({ location: location.toLowerCase() });
+      await storage.set({ location: normalizedLocation });
+      setLocation(normalizedLocation);
 
       // Trigger a refetch of data in the background script
       chrome.runtime.sendMessage({ type: "REFETCH_DATA" }, (response) => {
-        if (response?.success) {
-          // Refetch prayer times after the background script reloads
-          getPrayerTimesFromStorage();
-        } else {
-          console.log("Failed to reload background script:", response?.error);
+        if (chrome.runtime.lastError) {
+          setErrorMessage(chrome.runtime.lastError.message);
+          setIsLoading(false);
+          return;
         }
+
+        if (response?.success) {
+          applyPrayerTimes(response.data as PrayerTimesResponse);
+        } else {
+          setErrorMessage(response?.error || "Failed to fetch prayer times.");
+        }
+
+        setIsLoading(false);
       });
     } catch (error) {
       console.error("Failed to save location to storage:", error);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to save location.",
+      );
+      setIsLoading(false);
     }
   };
 
@@ -141,14 +189,21 @@ export default function ExtensionUI() {
           <div className="mb-4 flex space-x-2">
             <Input
               type="text"
-              placeholder="Enter country or place"
+              placeholder="Enter a city like Montreal or Algiers"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               onKeyDown={handleKeyDown} // Add keydown event listener
               className="flex-grow"
             />
-            <Button onClick={handleApply}>Apply</Button>
+            <Button onClick={handleApply} disabled={isLoading}>
+              {isLoading ? "Loading..." : "Apply"}
+            </Button>
           </div>
+          {errorMessage && (
+            <p className="text-sm text-center text-red-500 mb-2">
+              {errorMessage}
+            </p>
+          )}
           {location && ( // Only show countdown if location is set
             <div className="text-2xl font-bold mb-2 text-center">
               <Countdown fajrTime={prayers?.fajr || "00:00 am"} />

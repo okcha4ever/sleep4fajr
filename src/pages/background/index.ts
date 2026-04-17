@@ -1,7 +1,8 @@
 import { type PrayerTimesResponse } from "@src/lib/utils";
 
 console.log("background script loaded!");
-const api_key = process.env.APi_KEY;
+const proxyBaseUrl =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8787";
 
 /**
  * Calculate optimal sleep times based on Fajr time (06:30 AM).
@@ -56,31 +57,34 @@ async function fetchData(
   location: string,
   date?: string,
 ): Promise<PrayerTimesResponse> {
-  const url = date
-    ? `https://muslimsalat.com/${location}/${date}.json?key=${api_key}`
-    : `https://muslimsalat.com/${location}.json?key=${api_key}`;
-
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+    const prayerUrl = new URL("/api/prayer-times", proxyBaseUrl);
+    prayerUrl.searchParams.set("location", location);
+
+    if (date) {
+      prayerUrl.searchParams.set("date", date);
     }
 
-    const result = await response.json();
+    const response = await fetch(prayerUrl.toString(), {
+      headers: {
+        Accept: "application/json",
+      },
+    });
 
-    // Filter and extract the desired fields from the API response
-    const prayerTimes: PrayerTimesResponse = {
-      status_valid: result.status_valid,
-      status_description: result.status_description,
-      items: result.items,
-      country: result.country,
-      country_code: result.country_code,
-    };
+    if (!response.ok) {
+      const errorPayload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      throw new Error(
+        errorPayload?.error ||
+          `Prayer time proxy failed with status ${response.status}`,
+      );
+    }
 
-    // Store the filtered data in chrome storage
+    const prayerTimes = (await response.json()) as PrayerTimesResponse;
+
     await chrome.storage.local.set({ prayerTimes: prayerTimes });
 
-    // Return the filtered data
     return prayerTimes;
   } catch (err) {
     console.error("Error fetching data:", err);
@@ -112,6 +116,17 @@ const refetchData = async () => {
     throw error; // Propagate the error
   }
 };
+
+// chrome.runtime.onInstalled.addListener(async () => {
+//   // Fetch data on extension installation or reload
+//   refetchData();
+// });
+
+// Event listener for extension installation
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("Extension installed, initializing notifications...");
+});
+
 chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "REFETCH_DATA") {
     refetchData()
@@ -119,41 +134,28 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
         sendResponse({ success: true, data: newPrayerTimes });
       })
       .catch((error) => {
-        sendResponse({ success: false, error: error.message });
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
       });
 
-    // Return true to indicate that the response will be sent asynchronously
     return true;
   }
-});
 
-// chrome.runtime.onInstalled.addListener(async () => {
-//   // Fetch data on extension installation or reload
-//   refetchData();
-// });
-
-// Listen for messages to get the filtered data
-chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
-  if (request.type === "getPrayerTimes") {
-    chrome.storage.local.get("prayerTimes", (data) => {
+  if (message.type === "getPrayerTimes") {
+    chrome.storage.local.get("prayerTimes").then((data) => {
       sendResponse(data.prayerTimes);
     });
-    return true; // Keep the message channel open for asynchronous response
+
+    return true;
   }
-});
 
-// Event listener for extension installation
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("Extension installed, initializing notifications...");
-});
-
-// Event listener for calculateOptimalBedTimes
-chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "GET_SLEEP_TIMES") {
-    // Extract fajrTime from the message
-    const fajrTime = message.fajrTime || "6:30 am"; // Default to "6:30 am" if not provided
-    const sleepTimes = calculateOptimalBedTimes(fajrTime);
-    sendResponse(sleepTimes);
+    const fajrTime = message.fajrTime || "6:30 am";
+    sendResponse(calculateOptimalBedTimes(fajrTime));
+    return false;
   }
-  return true; // Required to use sendResponse asynchronously
+
+  return false;
 });

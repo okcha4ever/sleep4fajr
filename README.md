@@ -53,13 +53,15 @@ bun install
 
 ### 5. Configure Environment Variables
 
-Create a `.env` file in the root of the project (at the same level as `src/` or the `dist` folders) with the following content:
+Create a `.env` file in the root of the project with the following content:
 
 ```env
-API_KEY=your_api_key_here
+ISLAMIC_API_KEY=your_api_key_here
+VITE_API_BASE_URL=http://localhost:8787
 ```
 
-Replace `your_api_key_here` with your API key from [MuslimSalat.com](https://www.muslimsalat.com/).
+`ISLAMIC_API_KEY` is only used by the Bun proxy server, not by the extension bundle.
+`VITE_API_BASE_URL` tells the extension where your proxy is running.
 
 ### 6. Build the Extension
 
@@ -126,10 +128,20 @@ zip -r sleep4fajr-chrome.zip .
 
 ## Development Instructions
 
-For development purposes, the project includes scripts to run the extension in development mode:
+For development you need two processes:
 
-- **Firefox**: `bun run dev:firefox`
-- **Chrome**: `bun run dev:chrome`
+- Proxy server: `bun run server:dev`
+- Extension build/watch:
+  - Firefox: `bun run dev:firefox`
+  - Chrome: `bun run dev:chrome`
+
+Start the proxy first:
+
+```bash
+bun run server:dev
+```
+
+Then start the browser extension watcher.
 
 #### Run for Firefox:
 
@@ -137,16 +149,11 @@ For development purposes, the project includes scripts to run the extension in d
 bun run dev:firefox
 ```
 
-This will generate a `dist_firefox` folder containing the Firefox-compatible extension.
-This will start the development server and allow live reloading for the Firefox extension.
-
 #### Run for Chrome:
 
 ```bash
 bun run dev:chrome
 ```
-
-This will start the development server and allow live reloading for the Chrome extension.
 
 ---
 
@@ -158,6 +165,8 @@ The following scripts are defined in `package.json`:
 - **build:chrome**: Builds the extension for Chrome.
 - **dev:firefox**: Runs the extension in development mode for Firefox.
 - **dev:chrome**: Runs the extension in development mode for Chrome.
+- **server:dev**: Runs the local Bun prayer-times proxy with file watching.
+- **server:start**: Runs the local Bun prayer-times proxy once.
 
 ---
 

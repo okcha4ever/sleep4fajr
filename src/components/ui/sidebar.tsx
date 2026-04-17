@@ -55,12 +55,12 @@ const Sidebar: React.FC<SidebarProps> = ({ prayers, toggleSidebar }) => {
           <div className="text-center text-sm text-muted-foreground mt-4 italic">
             Powered by{" "}
             <a
-              href="https://www.muslimsalat.com"
+              href="https://islamicapi.com"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:underline font-semibold"
             >
-              MuslimSalat.com
+              IslamicAPI
             </a>
           </div>
         </CardContent>

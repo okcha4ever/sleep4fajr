@@ -17,6 +17,7 @@ export type PrayerTimesResponse = {
   items: Prayers[];
   country: string;
   country_code: string;
+  location_label?: string;
 };
 
 export function cn(...inputs: ClassValue[]) {
