@@ -174,7 +174,7 @@ async function fetchPrayerTimes(
   prayerUrl.searchParams.set("lat", geocodedLocation.lat);
   prayerUrl.searchParams.set("lon", geocodedLocation.lon);
   prayerUrl.searchParams.set("method", "3");
-  prayerUrl.searchParams.set("school", "1");
+  prayerUrl.searchParams.set("school", "19");
   prayerUrl.searchParams.set("api_key", apiKey);
 
   if (date) {
