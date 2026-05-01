@@ -1,6 +1,6 @@
 # Sleep4Fajr - Web Extension
 
-This is a web extension that helps users calculate the best times to sleep to wake up for Fajr prayer. It is built using Bun as the runtime and supports both Firefox and Chrome.
+This is a web extension that helps users calculate the best times to sleep to wake up for Fajr prayer. It supports both Firefox and Chrome and consumes a hosted Sleep4Fajr API for prayer-time data.
 
 ---
 
@@ -12,7 +12,7 @@ Follow these steps to create an exact copy of the add-on code:
 
 - **Operating System**: Windows, macOS, or Linux.
 - **Bun Runtime**: Install Bun (version 1.0 or higher).
-- **Node.js**: Not required (Bun is used instead of Node.js).
+- **Node.js**: Required if you also run the `sleep4fajr-website` API locally.
 
 ### 2. Install Bun
 
@@ -56,17 +56,15 @@ bun install
 Create a `.env` file in the root of the project with the following content:
 
 ```env
-ISLAMIC_API_KEY=your_api_key_here
-VITE_API_BASE_URL=https://sleep4fajr.onrender.com
+VITE_API_BASE_URL=https://your-sleep4fajr-website-domain.com
 ```
 
-`ISLAMIC_API_KEY` is only used by the Bun proxy server, not by the extension bundle.
-`VITE_API_BASE_URL` tells the extension where your proxy is running.
+`VITE_API_BASE_URL` tells the extension where your Sleep4Fajr website API is running.
 
-For local proxy development, override `VITE_API_BASE_URL` with:
+For local website development, override `VITE_API_BASE_URL` with:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8787
+VITE_API_BASE_URL=http://localhost:3000
 ```
 
 ### 6. Build the Extension
@@ -136,15 +134,16 @@ zip -r sleep4fajr-chrome.zip .
 
 For development you need two processes:
 
-- Proxy server: `bun run server:dev`
+- Website API/app: run the Next.js project in `../sleep4fajr-website`
 - Extension build/watch:
   - Firefox: `bun run dev:firefox`
   - Chrome: `bun run dev:chrome`
 
-Start the proxy first:
+Start the website first:
 
 ```bash
-bun run server:dev
+cd ../sleep4fajr-website
+npm run dev
 ```
 
 Then start the browser extension watcher.
@@ -171,8 +170,8 @@ The following scripts are defined in `package.json`:
 - **build:chrome**: Builds the extension for Chrome.
 - **dev:firefox**: Runs the extension in development mode for Firefox.
 - **dev:chrome**: Runs the extension in development mode for Chrome.
-- **server:dev**: Runs the local Bun prayer-times proxy with file watching.
-- **server:start**: Runs the local Bun prayer-times proxy once.
+- **server:dev**: Legacy local Bun proxy script.
+- **server:start**: Legacy local Bun proxy script.
 
 ---
 
@@ -187,6 +186,7 @@ The following scripts are defined in `package.json`:
 ## Required Programs
 
 - **Bun**: Install using the instructions above.
+- **Node.js**: Required if you want to run the Next.js website/API locally.
 - **Git**: Required for cloning the repository (if not already installed).
 
 ---
@@ -210,7 +210,7 @@ sleep4fajr/
 
 - The `dist_firefox` and `dist_chrome` folders contain the exact build outputs for Firefox and Chrome, respectively.
 - The `bun run build:firefox` and `bun run build:chrome` scripts execute all necessary technical steps to generate the builds.
-- Bun is used as the runtime, and no additional programs (e.g., Node.js) are required.
+- Bun is used for the extension build tooling. The website/API project runs separately on Next.js.
 
 ---
 
