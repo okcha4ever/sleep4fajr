@@ -373,6 +373,7 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/webstorm+all,visualstudiocode,sublimetext,node,react,windows,macos,linux
 
+*.zip
 
 # dependencies
 /node_modules
